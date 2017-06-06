@@ -1,0 +1,21 @@
+FROM microsoft/aspnet
+
+RUN mkdir C:\site
+
+#Create a new user and add to the admin group
+RUN NET USER serviceAccount "YOUR_PASSWORD" /ADD
+RUN NET LOCALGROUP "Administrators" "serviceAccount" /ADD
+
+#Create a new app pool with the user just created
+#Create a new site with the app pool just created
+RUN powershell -NoProfile -Command \
+    Import-Module WebAdministration; \
+    New-Item –Path IIS:\AppPools\CustomAppPool; \
+    Set-ItemProperty 'IIS:\AppPools\CustomAppPool' -Name 'processModel.userName' -Value 'serviceAccount'; \
+    Set-ItemProperty 'IIS:\AppPools\CustomAppPool' -Name 'processModel.password' -Value 'YOUR_PASSWORD'; \
+    Set-ItemProperty 'IIS:\AppPools\CustomAppPool' -Name 'processModel.identityType' -Value 3; \
+    New-Website -Name "webapp1" -PhysicalPath C:\site -Port 8082 -ApplicationPool "CustomAppPool";
+
+EXPOSE 8082
+
+COPY . /site
